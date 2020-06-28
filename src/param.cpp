@@ -14,4 +14,14 @@ Param::Param()
     R_bc = R;
     t_bc = Eigen::Vector3d(0.05,0.04,0.03);
 
+    R_bc_right = R;
+    t_bc_right = Eigen::Vector3d(0.05,-0.04,0.03);
+
+    // 相机外参数
+    Eigen::Vector3d tcc = R_bc.transpose() * t_bc;
+    Eigen::Vector3d tcc_right = R_bc_right.transpose() * t_bc_right;
+    T_extri = tcc - tcc_right;
+
+    cam_intrinsics = Eigen::Vector4d(1,1,1,1);
+
 }
