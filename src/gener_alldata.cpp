@@ -82,6 +82,102 @@ Vector2d cam2pixel(const Vector2d &p, const Vector4d &cam_int)
     return res;
 }
 
+typedef struct
+{
+    uint32_t id;
+    float u0;
+    float v0;
+    float u1;
+    float v1;
+} Stereo_feature_t;
+
+typedef struct
+{
+    uint64_t stamp;
+    std::vector<Stereo_feature_t> features;
+} Feature_measure_t;
+
+Feature_measure_t prev_features;
+Feature_measure_t curr_features;
+
+
+// void drawFeaturesStereo() {
+//     // Colors for different features.
+//     Scalar tracked(0, 255, 0);
+//     Scalar new_feature(0, 255, 255);
+
+//     static int grid_height =
+//         cam0_curr_img_ptr->image.rows / processor_config.grid_row;
+//     static int grid_width =
+//         cam0_curr_img_ptr->image.cols / processor_config.grid_col;
+
+//     // Create an output image.
+//     int img_height = cam0_curr_img_ptr->image.rows;
+//     int img_width = cam0_curr_img_ptr->image.cols;
+//     Mat out_img(img_height, img_width*2, CV_8UC3);
+//     cvtColor(cam0_curr_img_ptr->image, out_img.colRange(0, img_width), CV_GRAY2RGB);
+//     cvtColor(cam1_curr_img_ptr->image, out_img.colRange(img_width, img_width*2), CV_GRAY2RGB);
+
+//     // Collect features ids in the previous frame.
+//     vector<FeatureIDType> prev_ids(0);
+//     for (const auto& grid_features : *prev_features_ptr)
+//         for (const auto& feature : grid_features.second)
+//         prev_ids.push_back(feature.id);
+
+//     // Collect feature points in the previous frame.
+//     map<FeatureIDType, Point2f> prev_cam0_points;
+//     map<FeatureIDType, Point2f> prev_cam1_points;
+//     for (const auto& grid_features : *prev_features_ptr)
+//         for (const auto& feature : grid_features.second) {
+//         prev_cam0_points[feature.id] = feature.cam0_point;
+//         prev_cam1_points[feature.id] = feature.cam1_point;
+//         }
+
+//     // Collect feature points in the current frame.
+//     map<FeatureIDType, Point2f> curr_cam0_points;
+//     map<FeatureIDType, Point2f> curr_cam1_points;
+//     for (const auto& grid_features : *curr_features_ptr)
+//         for (const auto& feature : grid_features.second) {
+//         curr_cam0_points[feature.id] = feature.cam0_point;
+//         curr_cam1_points[feature.id] = feature.cam1_point;
+//         }
+
+//     // Draw tracked features.
+//     for (const auto& id : prev_ids) {
+//         if (prev_cam0_points.find(id) != prev_cam0_points.end() && curr_cam0_points.find(id) != curr_cam0_points.end()) {
+//             cv::Point2f prev_pt0 = prev_cam0_points[id];
+//             cv::Point2f prev_pt1 = prev_cam1_points[id] + Point2f(img_width, 0.0);
+//             cv::Point2f curr_pt0 = curr_cam0_points[id];
+//             cv::Point2f curr_pt1 = curr_cam1_points[id] + Point2f(img_width, 0.0);
+
+//             circle(out_img, curr_pt0, 3, tracked, -1);
+//             circle(out_img, curr_pt1, 3, tracked, -1);
+//             line(out_img, prev_pt0, curr_pt0, tracked, 1);
+//             line(out_img, prev_pt1, curr_pt1, tracked, 1);
+
+//             prev_cam0_points.erase(id);
+//             prev_cam1_points.erase(id);
+//             curr_cam0_points.erase(id);
+//             curr_cam1_points.erase(id);
+//         }
+//     }
+
+//     // Draw new features.
+//     for (const auto& new_cam0_point : curr_cam0_points) {
+//         cv::Point2f pt0 = new_cam0_point.second;
+//         cv::Point2f pt1 = curr_cam1_points[new_cam0_point.first] +
+//         Point2f(img_width, 0.0);
+
+//         circle(out_img, pt0, 3, new_feature, -1);
+//         circle(out_img, pt1, 3, new_feature, -1);
+//     }
+
+//     imshow("Feature", out_img);
+//     waitKey(5);
+
+//   return;
+// }
+
 int main(){
     // 建立keyframe文件夹
     mkdir("keyframe", 0777);
@@ -146,7 +242,6 @@ int main(){
     // save_Pose_asTUM("cam_pose_tum.txt",camdata);
 
     // points obs in image
-    std::vector<Vector3d> points_last_camRight;    // ３维点在上一帧cam视野里
     for(int n = 0; n < camdata.size(); ++n)
     {
         MotionData data = camdata[n];
@@ -185,14 +280,14 @@ int main(){
         if(first_frame)
         { 
             first_frame = false;
-            points_last_camRight = points_cur_camRight;
+            prev_features = curr_features;
         }
         // 调用优化函数，进行仿真优化
         
         // .......
 
         // 将当前特征点保存成为上一帧数据
-        points_last_camRight = points_cur_camRight;
+        prev_features = curr_features;
 
         // save points
         // std::stringstream filename1;
